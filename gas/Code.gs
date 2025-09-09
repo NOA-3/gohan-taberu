@@ -11,24 +11,45 @@ const SHEET_NAMES = {
 };
 
 /**
- * Web APIエンドポイント
- */
-function doGet(e) {
-  return HtmlService.createHtmlOutputFromFile('index')
-    .setTitle('ごはんたべる？')
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-}
-
-/**
  * POST処理 - CORS対応
  */
 function doPost(e) {
-  // CORS headers
+  return handleRequest(e);
+}
+
+/**
+ * GET処理 - CORS対応  
+ */
+function doGet(e) {
+  return handleRequest(e);
+}
+
+/**
+ * CORSヘッダー付きでリクエストを処理
+ */
+function handleRequest(e) {
   const output = ContentService.createTextOutput();
   output.setMimeType(ContentService.MimeType.JSON);
   
+  // CORS ヘッダーを設定
+  output.addHeader('Access-Control-Allow-Origin', '*');
+  output.addHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  output.addHeader('Access-Control-Allow-Headers', 'Content-Type');
+  output.addHeader('Access-Control-Max-Age', '3600');
+  
   try {
-    const requestData = JSON.parse(e.postData.contents);
+    // OPTIONSリクエスト（プリフライト）への対応
+    if (e.method === 'OPTIONS') {
+      return output.setContent('');
+    }
+    
+    let requestData;
+    if (e.method === 'POST' && e.postData) {
+      requestData = JSON.parse(e.postData.contents);
+    } else {
+      requestData = e.parameter;
+    }
+    
     const action = requestData.action;
     
     let result;
@@ -51,7 +72,7 @@ function doPost(e) {
     
     return output.setContent(JSON.stringify(result));
   } catch (error) {
-    console.error('doPost error:', error);
+    console.error('Request error:', error);
     return output.setContent(JSON.stringify({
       success: false,
       error: error.toString()
