@@ -31,7 +31,13 @@ class HomeManager {
   }
 
   checkLoginStatus() {
-    const loginInfo = authManager.getLoginInfo();
+    // authManagerが利用できない場合はログイン画面へリダイレクト
+    if (typeof window.authManager === 'undefined') {
+      window.location.href = 'index.html';
+      return;
+    }
+    
+    const loginInfo = window.authManager.getLoginInfo();
     if (!loginInfo) {
       // ログインしていない場合はログイン画面へリダイレクト
       window.location.href = 'index.html';
@@ -336,7 +342,12 @@ class HomeManager {
 
   handleLogout() {
     if (confirm('ログアウトしますか？')) {
-      authManager.logout();
+      if (window.authManager) {
+        window.authManager.logout();
+      } else {
+        // authManagerが利用できない場合は直接リダイレクト
+        window.location.href = 'index.html';
+      }
     }
   }
 }

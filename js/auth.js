@@ -25,20 +25,27 @@ class AuthManager {
   }
 
   setupEventListeners() {
+    // DOM要素が存在しない場合はスキップ（home.htmlなど）
+    if (!this.loginForm) {
+      return;
+    }
+    
     // フォーム送信イベント
     this.loginForm.addEventListener('submit', (e) => {
       e.preventDefault();
       this.handleLogin();
     });
 
-    // Enterキーでのログイン
+    // Enterキーでのログイン（入力フィールドが存在する場合のみ）
     [this.userIdInput, this.passwordInput].forEach(input => {
-      input.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          this.handleLogin();
-        }
-      });
+      if (input) {
+        input.addEventListener('keypress', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            this.handleLogin();
+          }
+        });
+      }
     });
 
     // 入力フィールドのリアルタイムバリデーション
