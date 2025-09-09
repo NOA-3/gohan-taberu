@@ -4,7 +4,7 @@
 
 class AuthManager {
   constructor() {
-    this.isRedirecting = false; // リダイレクト中フラグを追加
+    // this.isRedirecting = false; // リダイレクト中フラグ（一時的に無効化）
     this.init();
   }
 
@@ -21,8 +21,8 @@ class AuthManager {
     // イベントリスナーの設定
     this.setupEventListeners();
 
-    // タブ終了時のログアウト機能を設定
-    this.setupTabCloseLogout();
+    // タブ終了時のログアウト機能を設定（一時的に無効化）
+    // this.setupTabCloseLogout();
 
     // ログインページの場合のみログイン済みチェックを実行
     if (this.loginForm) {
@@ -229,8 +229,6 @@ class AuthManager {
   redirectToHome() {
     // ホーム画面へリダイレクト（既にhome.htmlにいる場合は実行しない）
     if (window.location.pathname !== '/home.html' && !window.location.pathname.endsWith('/home.html')) {
-      // リダイレクト開始フラグを設定してログアウトを防止
-      this.isRedirecting = true;
       window.location.href = 'home.html';
     }
   }
