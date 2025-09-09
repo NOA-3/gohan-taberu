@@ -95,25 +95,42 @@ class AuthManager {
     const userId = this.userIdInput.value.trim();
     const password = this.passwordInput.value.trim();
 
+    console.log('=== Login Attempt ===');
+    console.log('User ID:', userId);
+    console.log('Password Length:', password.length);
+
     try {
       // ローディング状態開始
       this.setLoading(true);
       this.clearError();
 
       // API呼び出し
+      console.log('Calling authenticateUser API...');
       const result = await api.authenticateUser(userId, password);
+      
+      console.log('=== Login Response ===');
+      console.log('Success:', result.success);
+      console.log('User Name:', result.userName);
+      if (result.error) {
+        console.error('Login Error:', result.error);
+      }
 
       if (result.success) {
         // ログイン成功
+        console.log('Login successful, saving info and redirecting...');
         this.saveLoginInfo(userId, result.userName);
         this.redirectToHome();
       } else {
         // ログイン失敗
+        console.error('Login failed:', result.error);
         this.showError(result.error || 'ログインに失敗しました');
         this.focusFirstInput();
       }
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('=== Login Exception ===');
+      console.error('Error Object:', error);
+      console.error('Error Message:', error.message);
+      console.error('Stack Trace:', error.stack);
       this.showError('ログイン処理中にエラーが発生しました');
       this.focusFirstInput();
     } finally {

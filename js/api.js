@@ -30,21 +30,42 @@ class GASApi {
       
       const url = `${this.baseUrl}?${params.toString()}`;
       
+      // デバッグ: リクエスト情報を表示
+      console.log('=== GAS API Request ===');
+      console.log('URL:', url);
+      console.log('Parameters:', Object.fromEntries(params));
+      console.log('Request Data:', data);
+      
       // GETリクエスト（シンプルリクエスト - プリフライトなし）
       const response = await fetch(url, {
         method: 'GET',
         // ヘッダーなし（シンプルリクエスト維持）
       });
 
+      console.log('Response Status:', response.status);
+      console.log('Response OK:', response.ok);
+
       if (!response.ok) {
+        console.error('HTTP Error:', response.status, response.statusText);
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const result = await response.json();
+      
+      // デバッグ: レスポンス内容を表示
+      console.log('=== GAS API Response ===');
+      console.log('Full Response:', result);
+      console.log('Success:', result.success);
+      if (result.error) {
+        console.error('API Error:', result.error);
+      }
+      
       return result;
       
     } catch (error) {
-      console.error('API request failed:', error);
+      console.error('=== API Request Failed ===');
+      console.error('Error Details:', error);
+      console.error('Stack Trace:', error.stack);
       throw new Error('サーバーとの通信に失敗しました: ' + error.message);
     }
   }
@@ -224,8 +245,21 @@ class MockApi {
 }
 
 // 開発環境判定とAPI切り替え
+// 本番環境を強制的に使用する場合は、以下のコメントを外してください
+// const api = gasApi;
+
+// 開発環境でモックAPIを使用する場合（デフォルト）
 const isDevelopment = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-const api = isDevelopment ? new MockApi() : gasApi;
+// const api = isDevelopment ? new MockApi() : gasApi;
+
+// 本番環境（Google Apps Script）を常に使用
+const api = gasApi;
+
+// デバッグ: 使用中のAPIを表示
+console.log('=== API Configuration ===');
+console.log('Using API:', api instanceof GASApi ? 'GAS API (Production)' : 'Mock API (Development)');
+console.log('GAS API URL:', GAS_API_URL);
+console.log('Current Location:', location.hostname);
 
 // エクスポート
 window.api = api;

@@ -109,20 +109,46 @@ class HomeManager {
       this.showLoading(true);
       this.clearMessages();
       
+      // デバッグ: リクエストパラメータを表示
+      console.log('=== Loading Menu Data ===');
+      console.log('Year:', this.currentYear);
+      console.log('Month:', this.currentMonth);
+      console.log('User:', this.currentUser);
+      
       // メニューデータ取得
       const result = await api.getRecipes(this.currentYear, this.currentMonth);
       
+      // デバッグ: APIレスポンスを表示
+      console.log('=== Menu Data Response ===');
+      console.log('Success:', result.success);
+      console.log('Recipes:', result.recipes);
+      console.log('Recipe Count:', result.recipes ? result.recipes.length : 0);
+      if (result.error) {
+        console.error('Error Message:', result.error);
+      }
+      
       if (result.success) {
-        this.menuData = result.recipes;
-        await this.loadCheckStates();
-        this.renderMenuBoxes();
-        this.scrollToToday();
+        this.menuData = result.recipes || [];
+        console.log('Menu data set, count:', this.menuData.length);
+        
+        if (this.menuData.length === 0) {
+          console.warn('No recipes found for this month');
+          this.showEmptyState();
+        } else {
+          await this.loadCheckStates();
+          this.renderMenuBoxes();
+          this.scrollToToday();
+        }
       } else {
+        console.error('API returned success: false');
         this.showError(result.error || 'メニューデータの取得に失敗しました');
         this.showEmptyState();
       }
     } catch (error) {
-      console.error('Failed to load menu data:', error);
+      console.error('=== Menu Load Error ===');
+      console.error('Error Object:', error);
+      console.error('Error Message:', error.message);
+      console.error('Stack Trace:', error.stack);
       this.showError('メニューデータの読み込み中にエラーが発生しました');
       this.showEmptyState();
     } finally {
@@ -132,15 +158,20 @@ class HomeManager {
 
   async loadCheckStates() {
     try {
+      console.log('=== Loading Check States ===');
       // 各日付のチェック状態を取得
       for (const menu of this.menuData) {
         const result = await api.getCheckState(menu.date, this.currentUser.userName);
+        console.log(`Check state for ${menu.date}:`, result);
         if (result.success) {
           this.checkStates.set(menu.date, result.checked);
         }
       }
+      console.log('All check states loaded:', Object.fromEntries(this.checkStates));
     } catch (error) {
-      console.error('Failed to load check states:', error);
+      console.error('=== Check State Load Error ===');
+      console.error('Error:', error);
+      console.error('Stack:', error.stack);
     }
   }
 
