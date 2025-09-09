@@ -1,0 +1,25 @@
+{
+  "name": "gohan-taberu",
+  "version": "1.0.0",
+  "description": "職員の食事利用チェックを行うモバイル対応ウェブアプリ",
+  "main": "index.html",
+  "scripts": {
+    "start": "python -m http.server 8000",
+    "deploy": "gh-pages -d ."
+  },
+  "keywords": [
+    "spreadsheet",
+    "meal-management", 
+    "mobile-app",
+    "google-apps-script"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/gohan-taberu.git"
+  },
+  "devDependencies": {
+    "gh-pages": "^4.0.0"
+  }
+}
