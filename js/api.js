@@ -2,8 +2,8 @@
  * Google Apps Script API連携モジュール
  */
 
-// Apps Script Web AppのURL
-const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbxtHG1jzho2xF2hbYhYmLK8ScvW9ACsx9R7sKEOnHVel5X8FfPf-btSt5m4649MaL5aFA/exec';
+// Apps Script Web AppのURL  
+const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbzIJ-hOzJeW49PQnTS0NUC7xgsvZqEoTFIykH67fFGApTc3F03pAJNiHL5388yLSl4KWw/exec';
 
 class GASApi {
   constructor() {
