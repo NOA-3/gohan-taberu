@@ -123,7 +123,7 @@ function getRecipes(year, month) {
     const data = menuSheet.getDataRange().getValues();
     
     const recipes = [];
-    const targetMonth = `${year}/${month}`;
+    const targetMonth = `${year}/${String(month).padStart(2, '0')}`;
     
     // ヘッダー行をスキップ
     for (let i = 1; i < data.length; i++) {
