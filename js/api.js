@@ -1,9 +1,14 @@
 /**
- * Google Apps Script API連携モジュール
+ * Google Apps Script API連携モジュール (CORS根本解決版)
+ * 
+ * CORS解決策：
+ * 1. GETリクエストのみ使用（プリフライト完全回避）
+ * 2. URLパラメータでデータ送信
+ * 3. シンプルリクエストでブラウザ制限なし
  */
 
-// Apps Script Web AppのURL  
-const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbzLNE2p0ZjloH4DFOFuKp26XXzSEDd_NQNvDsnlPqd302LtpNxKGKVloRZicq47N-9B/exec';
+// Apps Script Web AppのURL（Code-Final-CORS.gs用）
+const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbySNobqGMdzVRg-CnsFZ3kCzPHtCMh8r1BRVv2C8lZtwKfVjzDzjmz4txQypvCZApqMcA/exec';
 
 class GASApi {
   constructor() {
@@ -11,16 +16,24 @@ class GASApi {
   }
 
   /**
-   * APIリクエスト実行
+   * GETリクエスト実行（プリフライト回避）
    */
   async request(data) {
     try {
-      const response = await fetch(this.baseUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data)
+      // URLパラメータ作成
+      const params = new URLSearchParams();
+      for (const key in data) {
+        if (data[key] !== null && data[key] !== undefined) {
+          params.append(key, data[key].toString());
+        }
+      }
+      
+      const url = `${this.baseUrl}?${params.toString()}`;
+      
+      // GETリクエスト（シンプルリクエスト - プリフライトなし）
+      const response = await fetch(url, {
+        method: 'GET',
+        // ヘッダーなし（シンプルリクエスト維持）
       });
 
       if (!response.ok) {
@@ -29,9 +42,10 @@ class GASApi {
 
       const result = await response.json();
       return result;
+      
     } catch (error) {
       console.error('API request failed:', error);
-      throw new Error('サーバーとの通信に失敗しました');
+      throw new Error('サーバーとの通信に失敗しました: ' + error.message);
     }
   }
 
@@ -94,7 +108,7 @@ class GASApi {
 // グローバルインスタンス
 const gasApi = new GASApi();
 
-// 開発環境用モックAPI
+// 開発環境用モックAPI（変更なし）
 class MockApi {
   constructor() {
     this.users = [
@@ -150,7 +164,8 @@ class MockApi {
       setTimeout(() => {
         resolve({
           success: true,
-          recipes: this.recipes
+          recipes: this.recipes,
+          count: this.recipes.length
         });
       }, 500);
     });
@@ -163,7 +178,10 @@ class MockApi {
         this.checks.set(key, checked);
         resolve({
           success: true,
-          checked: checked
+          checked: checked,
+          date: date,
+          userName: userName,
+          updateTime: new Date().toISOString()
         });
       }, 300);
     });
@@ -176,7 +194,9 @@ class MockApi {
         const checked = this.checks.get(key) || false;
         resolve({
           success: true,
-          checked: checked
+          checked: checked,
+          date: date,
+          userName: userName
         });
       }, 200);
     });
@@ -189,7 +209,8 @@ class MockApi {
         if (user) {
           resolve({
             success: true,
-            userName: user.name
+            userName: user.name,
+            userId: user.id
           });
         } else {
           resolve({
