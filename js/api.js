@@ -3,7 +3,7 @@
  */
 
 // Apps Script Web AppのURL  
-const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbwcAqolW2JEg37v4ZWaevquYhj76MJG-OxCK3DeEHEwpm4lf3ynSZoMHpctJE1Cm60bzQ/exec';
+const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbwD4DroSBejvw9lpFB6X1UQ7d6JlZ3k8cxszUHFWOpcAJCPNhKkzseiho331oqe5Nw97w/exec';
 
 class GASApi {
   constructor() {
