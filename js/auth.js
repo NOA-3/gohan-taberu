@@ -4,6 +4,7 @@
 
 class AuthManager {
   constructor() {
+    this.isRedirecting = false; // リダイレクト中フラグを追加
     this.init();
   }
 
@@ -63,21 +64,25 @@ class AuthManager {
   }
 
   setupTabCloseLogout() {
-    // タブ終了・ページ離脱時にログアウト
+    // タブ終了・ページ離脱時にログアウト（リダイレクト中は除く）
     window.addEventListener('beforeunload', () => {
-      this.clearLoginInfo();
-    });
-
-    // ページの非表示時（タブ切り替え・ブラウザ最小化）にもログアウト
-    window.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'hidden') {
+      if (!this.isRedirecting) {
         this.clearLoginInfo();
       }
     });
 
-    // ウィンドウ/タブを閉じる際の処理
+    // ページの非表示時（タブ切り替え・ブラウザ最小化）にもログアウト（リダイレクト中は除く）
+    window.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden' && !this.isRedirecting) {
+        this.clearLoginInfo();
+      }
+    });
+
+    // ウィンドウ/タブを閉じる際の処理（リダイレクト中は除く）
     window.addEventListener('unload', () => {
-      this.clearLoginInfo();
+      if (!this.isRedirecting) {
+        this.clearLoginInfo();
+      }
     });
   }
 
@@ -224,6 +229,8 @@ class AuthManager {
   redirectToHome() {
     // ホーム画面へリダイレクト（既にhome.htmlにいる場合は実行しない）
     if (window.location.pathname !== '/home.html' && !window.location.pathname.endsWith('/home.html')) {
+      // リダイレクト開始フラグを設定してログアウトを防止
+      this.isRedirecting = true;
       window.location.href = 'home.html';
     }
   }
