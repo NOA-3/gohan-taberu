@@ -17,7 +17,6 @@ class GASApi {
     try {
       const response = await fetch(this.baseUrl, {
         method: 'POST',
-        mode: 'cors',
         headers: {
           'Content-Type': 'application/json',
         },
