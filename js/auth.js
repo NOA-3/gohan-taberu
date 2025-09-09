@@ -20,8 +20,13 @@ class AuthManager {
     // イベントリスナーの設定
     this.setupEventListeners();
 
-    // 既にログイン済みかチェック
-    this.checkExistingLogin();
+    // タブ終了時のログアウト機能を設定
+    this.setupTabCloseLogout();
+
+    // ログインページの場合のみログイン済みチェックを実行
+    if (this.loginForm) {
+      this.checkExistingLogin();
+    }
   }
 
   setupEventListeners() {
@@ -54,6 +59,25 @@ class AuthManager {
         this.clearError();
         this.validateForm();
       });
+    });
+  }
+
+  setupTabCloseLogout() {
+    // タブ終了・ページ離脱時にログアウト
+    window.addEventListener('beforeunload', () => {
+      this.clearLoginInfo();
+    });
+
+    // ページの非表示時（タブ切り替え・ブラウザ最小化）にもログアウト
+    window.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') {
+        this.clearLoginInfo();
+      }
+    });
+
+    // ウィンドウ/タブを閉じる際の処理
+    window.addEventListener('unload', () => {
+      this.clearLoginInfo();
     });
   }
 
@@ -198,8 +222,10 @@ class AuthManager {
   }
 
   redirectToHome() {
-    // ホーム画面へリダイレクト
-    window.location.href = 'home.html';
+    // ホーム画面へリダイレクト（既にhome.htmlにいる場合は実行しない）
+    if (window.location.pathname !== '/home.html' && !window.location.pathname.endsWith('/home.html')) {
+      window.location.href = 'home.html';
+    }
   }
 
   logout() {
