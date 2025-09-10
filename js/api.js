@@ -52,37 +52,79 @@ class GASApi {
             console.error('API Error:', result.error);
           }
           
-          // クリーンアップ
-          delete window[callbackName];
-          document.head.removeChild(script);
+          // クリーンアップ（安全に実行）
+          try {
+            delete window[callbackName];
+            if (script && script.parentNode) {
+              script.parentNode.removeChild(script);
+            }
+          } catch (cleanupError) {
+            console.warn('Cleanup error:', cleanupError);
+          }
           
-          resolve(result);
+          // レスポンスのバリデーション
+          if (result && typeof result === 'object') {
+            resolve(result);
+          } else {
+            reject(new Error('無効なレスポンス形式です'));
+          }
         };
         
         // scriptタグを作成してJSONPリクエスト
         const script = document.createElement('script');
         script.src = url;
-        script.onerror = () => {
+        script.onerror = (errorEvent) => {
           console.error('=== JSONP Request Failed ===');
-          delete window[callbackName];
-          document.head.removeChild(script);
-          reject(new Error('JSONPリクエストが失敗しました'));
+          console.error('Error Event:', errorEvent);
+          
+          // クリーンアップ
+          try {
+            delete window[callbackName];
+            if (script && script.parentNode) {
+              script.parentNode.removeChild(script);
+            }
+          } catch (cleanupError) {
+            console.warn('Cleanup error in onerror:', cleanupError);
+          }
+          
+          reject(new Error('ネットワークエラーまたはGoogle Apps Scriptのアクセスに失敗しました'));
         };
         
-        // タイムアウト設定（10秒）
-        const timeout = setTimeout(() => {
+        // タイムアウト設定（15秒）
+        let timeoutId = setTimeout(() => {
           if (window[callbackName]) {
-            delete window[callbackName];
-            document.head.removeChild(script);
-            reject(new Error('リクエストがタイムアウトしました'));
+            console.warn('Request timeout for:', callbackName);
+            
+            // クリーンアップ
+            try {
+              delete window[callbackName];
+              if (script && script.parentNode) {
+                script.parentNode.removeChild(script);
+              }
+            } catch (cleanupError) {
+              console.warn('Cleanup error in timeout:', cleanupError);
+            }
+            
+            reject(new Error('Google Apps Scriptへのリクエストがタイムアウトしました。ネットワーク環境を確認してください。'));
           }
-        }, 10000);
+        }, 15000);
         
-        // コールバックが呼ばれたらタイムアウトをクリア
+        // 元のコールバックを保存し、タイムアウトクリア処理を追加
         const originalCallback = window[callbackName];
         window[callbackName] = (result) => {
-          clearTimeout(timeout);
-          originalCallback(result);
+          // タイムアウトをクリア
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+            timeoutId = null;
+          }
+          
+          // 元のコールバックを安全に呼び出す
+          try {
+            originalCallback(result);
+          } catch (callbackError) {
+            console.error('Callback execution error:', callbackError);
+            reject(new Error('レスポンス処理中にエラーが発生しました'));
+          }
         };
         
         document.head.appendChild(script);
@@ -99,10 +141,13 @@ class GASApi {
    * ユーザー認証
    */
   async authenticateUser(id, password) {
+    // パスワードをBase64エンコード（最低限の難読化）
+    const encodedPassword = btoa(unescape(encodeURIComponent(password)));
     return await this.request({
       action: 'login',
       id: id,
-      password: password
+      password: encodedPassword,
+      encoded: 'true'
     });
   }
 
