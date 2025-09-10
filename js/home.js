@@ -56,6 +56,7 @@ class HomeManager {
     this.menuContainer = document.getElementById('menuContainer');
     this.emptyState = document.getElementById('emptyState');
     this.messageContainer = document.getElementById('messageContainer');
+    this.bottomLoading = document.getElementById('bottomLoading');
     
     // ユーザー名表示
     this.userNameElement.textContent = this.currentUser.userName;
@@ -134,14 +135,17 @@ class HomeManager {
         if (this.menuData.length === 0) {
           console.warn('No recipes found for this month');
           this.showEmptyState();
+          this.showBottomLoading(false); // 空状態時はローディング非表示
         } else {
           // 今日から順に1日ずつ完全に読み込んで表示
+          this.showBottomLoading(true);
           this.loadMenuDataProgressively();
         }
       } else {
         console.error('API returned success: false');
         this.showError(result.error || 'メニューデータの取得に失敗しました');
         this.showEmptyState();
+        this.showBottomLoading(false); // エラー時はローディング非表示
       }
     } catch (error) {
       console.error('=== Menu Load Error ===');
@@ -150,6 +154,7 @@ class HomeManager {
       console.error('Stack Trace:', error.stack);
       this.showError('メニューデータの読み込み中にエラーが発生しました');
       this.showEmptyState();
+      this.showBottomLoading(false); // 例外時はローディング非表示
     } finally {
       this.showLoading(false);
     }
@@ -289,11 +294,16 @@ class HomeManager {
       
       console.log('All menu data loaded progressively day by day');
       
+      // 全てのメニュー読み込み完了後、最下部ローディングを非表示
+      this.showBottomLoading(false);
+      
     } catch (error) {
       console.error('=== Progressive Menu Load Error ===');
       console.error('Error:', error);
       console.error('Stack:', error.stack);
       this.showEmptyState();
+      // エラー時もローディングを非表示
+      this.showBottomLoading(false);
     }
   }
   
@@ -471,6 +481,16 @@ class HomeManager {
 
   clearMessages() {
     this.messageContainer.innerHTML = '';
+  }
+
+  showBottomLoading(show) {
+    if (show) {
+      this.bottomLoading.classList.remove('hidden');
+      console.log('Bottom loading shown: メニュー読込中...');
+    } else {
+      this.bottomLoading.classList.add('hidden');
+      console.log('Bottom loading hidden: All menus loaded');
+    }
   }
 
   handleLogout() {
