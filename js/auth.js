@@ -4,7 +4,7 @@
 
 class AuthManager {
   constructor() {
-    // this.isRedirecting = false; // リダイレクト中フラグ（一時的に無効化）
+    this.isRedirecting = false; // リダイレクト中フラグ
     this.init();
   }
 
@@ -21,8 +21,8 @@ class AuthManager {
     // イベントリスナーの設定
     this.setupEventListeners();
 
-    // タブ終了時のログアウト機能を設定（一時的に無効化）
-    // this.setupTabCloseLogout();
+    // タブ終了時のログアウト機能を設定
+    this.setupTabCloseLogout();
 
     // ログインページの場合のみログイン済みチェックを実行
     if (this.loginForm) {
@@ -67,13 +67,7 @@ class AuthManager {
     // タブ終了・ページ離脱時にログアウト（リダイレクト中は除く）
     window.addEventListener('beforeunload', () => {
       if (!this.isRedirecting) {
-        this.clearLoginInfo();
-      }
-    });
-
-    // ページの非表示時（タブ切り替え・ブラウザ最小化）にもログアウト（リダイレクト中は除く）
-    window.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'hidden' && !this.isRedirecting) {
+        console.log('beforeunload: Clearing login info');
         this.clearLoginInfo();
       }
     });
@@ -81,6 +75,15 @@ class AuthManager {
     // ウィンドウ/タブを閉じる際の処理（リダイレクト中は除く）
     window.addEventListener('unload', () => {
       if (!this.isRedirecting) {
+        console.log('unload: Clearing login info');
+        this.clearLoginInfo();
+      }
+    });
+
+    // ページハイド時（より確実）
+    window.addEventListener('pagehide', () => {
+      if (!this.isRedirecting) {
+        console.log('pagehide: Clearing login info');
         this.clearLoginInfo();
       }
     });
@@ -244,9 +247,16 @@ class AuthManager {
   }
 
   redirectToHome() {
+    // リダイレクト中フラグを設定
+    this.isRedirecting = true;
+    
     // ホーム画面へリダイレクト（既にhome.htmlにいる場合は実行しない）
     if (window.location.pathname !== '/home.html' && !window.location.pathname.endsWith('/home.html')) {
+      console.log('Redirecting to home.html');
       window.location.href = 'home.html';
+    } else {
+      // 既にhome.htmlにいる場合はフラグをリセット
+      this.isRedirecting = false;
     }
   }
 
