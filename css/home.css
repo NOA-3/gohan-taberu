@@ -3,7 +3,7 @@
 .home-container {
   min-height: 100vh;
   background: var(--light-gray);
-  padding-top: 120px; /* 固定ヘッダー分のスペース */
+  padding-top: 140px; /* 固定ヘッダー分のスペース（増加） */
 }
 
 /* 固定ヘッダー */
@@ -217,9 +217,9 @@
 
 /* 時間制限表示 */
 .time-limit-notice {
-  background: var(--warning-color);
+  background: rgba(255, 152, 0, 0.9);
   color: var(--white);
-  padding: var(--spacing-sm);
+  padding: var(--spacing-xs);
   text-align: center;
   font-size: var(--font-size-xs);
   font-weight: 500;
@@ -228,6 +228,8 @@
   left: 0;
   right: 0;
   z-index: 10;
+  backdrop-filter: blur(4px);
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
 }
 
 /* エラー・成功メッセージ */

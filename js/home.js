@@ -158,20 +158,74 @@ class HomeManager {
 
   async loadCheckStates() {
     try {
-      console.log('=== Loading Check States ===');
-      // 各日付のチェック状態を取得
-      for (const menu of this.menuData) {
-        const result = await api.getCheckState(menu.date, this.currentUser.userName);
-        console.log(`Check state for ${menu.date}:`, result);
-        if (result.success) {
-          this.checkStates.set(menu.date, result.checked);
+      console.log('=== Loading Check States (Optimized) ===');
+      
+      // 今日の日付を取得
+      const today = new Date();
+      const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      
+      // 今日以降のメニューのみを優先して読み込み
+      const todayAndFuture = this.menuData.filter(menu => {
+        const menuDate = new Date(menu.date);
+        return menuDate >= todayDate;
+      });
+      
+      const past = this.menuData.filter(menu => {
+        const menuDate = new Date(menu.date);
+        return menuDate < todayDate;
+      });
+      
+      // 今日以降のチェック状態を並列で読み込み
+      const todayPromises = todayAndFuture.slice(0, 5).map(async (menu) => {
+        try {
+          const result = await api.getCheckState(menu.date, this.currentUser.userName);
+          if (result.success) {
+            this.checkStates.set(menu.date, result.checked);
+          }
+          return { date: menu.date, success: result.success };
+        } catch (error) {
+          console.warn(`Failed to load check state for ${menu.date}:`, error);
+          return { date: menu.date, success: false };
         }
+      });
+      
+      // 今日以降の分を先に処理
+      await Promise.all(todayPromises);
+      console.log('Priority check states loaded');
+      
+      // 残りの今日以降のデータを並列読み込み
+      if (todayAndFuture.length > 5) {
+        const remainingTodayPromises = todayAndFuture.slice(5).map(async (menu) => {
+          try {
+            const result = await api.getCheckState(menu.date, this.currentUser.userName);
+            if (result.success) {
+              this.checkStates.set(menu.date, result.checked);
+            }
+          } catch (error) {
+            console.warn(`Failed to load check state for ${menu.date}:`, error);
+          }
+        });
+        
+        await Promise.all(remainingTodayPromises);
       }
-      console.log('All check states loaded:', Object.fromEntries(this.checkStates));
+      
+      // 過ぎた日付のチェック状態は読み込まない（パフォーマンス最適化）
+      console.log(`Skipped loading check states for ${past.length} past dates`);
+      
     } catch (error) {
       console.error('=== Check State Load Error ===');
       console.error('Error:', error);
       console.error('Stack:', error.stack);
+    }
+  }
+  
+  updateCheckboxState(date, checked) {
+    const checkbox = document.querySelector(`[data-date="${date}"] .check-input`);
+    const label = document.querySelector(`[data-date="${date}"] .check-label`);
+    
+    if (checkbox && label) {
+      checkbox.checked = checked;
+      label.textContent = checked ? '利用する ✅' : '利用しない ⬜';
     }
   }
 
@@ -185,7 +239,33 @@ class HomeManager {
     
     this.hideEmptyState();
     
+    // 今日の日付を取得
+    const today = new Date();
+    const todayString = `${today.getFullYear()}/${today.getMonth() + 1}/${today.getDate()}`;
+    
+    // メニューを今日以降と今日より前に分ける
+    const todayAndFuture = [];
+    const past = [];
+    
     this.menuData.forEach(menu => {
+      const menuDate = new Date(menu.date);
+      const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      
+      if (menuDate >= todayDate) {
+        todayAndFuture.push(menu);
+      } else {
+        past.push(menu);
+      }
+    });
+    
+    // 今日以降を先に表示
+    todayAndFuture.forEach(menu => {
+      const menuBox = this.createMenuBox(menu);
+      this.menuContainer.appendChild(menuBox);
+    });
+    
+    // 過去のデータを後から追加
+    past.forEach(menu => {
       const menuBox = this.createMenuBox(menu);
       this.menuContainer.appendChild(menuBox);
     });
