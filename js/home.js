@@ -241,34 +241,27 @@ class HomeManager {
     
     // 今日の日付を取得
     const today = new Date();
-    const todayString = `${today.getFullYear()}/${today.getMonth() + 1}/${today.getDate()}`;
+    const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
     
-    // メニューを今日以降と今日より前に分ける
-    const todayAndFuture = [];
-    const past = [];
-    
-    this.menuData.forEach(menu => {
+    // 今日以降のメニューのみを表示
+    const todayAndFuture = this.menuData.filter(menu => {
       const menuDate = new Date(menu.date);
-      const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-      
-      if (menuDate >= todayDate) {
-        todayAndFuture.push(menu);
-      } else {
-        past.push(menu);
-      }
+      return menuDate >= todayDate;
     });
     
-    // 今日以降を先に表示
+    console.log(`Displaying ${todayAndFuture.length} menus from today onwards`);
+    console.log(`Skipped ${this.menuData.length - todayAndFuture.length} past menus`);
+    
+    // 今日以降のメニューのみ表示
     todayAndFuture.forEach(menu => {
       const menuBox = this.createMenuBox(menu);
       this.menuContainer.appendChild(menuBox);
     });
     
-    // 過去のデータを後から追加
-    past.forEach(menu => {
-      const menuBox = this.createMenuBox(menu);
-      this.menuContainer.appendChild(menuBox);
-    });
+    // 表示するメニューがない場合
+    if (todayAndFuture.length === 0) {
+      this.showEmptyState();
+    }
   }
 
   createMenuBox(menu) {
