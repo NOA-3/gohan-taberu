@@ -58,7 +58,8 @@ class AuthManager {
     [this.userIdInput, this.passwordInput].forEach(input => {
       input.addEventListener('input', () => {
         this.clearError();
-        this.validateForm();
+        // バリデーションはフォーカス移動なしで実行
+        this.validateFormSilent();
       });
     });
   }
@@ -154,6 +155,19 @@ class AuthManager {
     if (!password) {
       this.showError('パスワードを入力してください');
       this.passwordInput.focus();
+      return false;
+    }
+
+    return true;
+  }
+
+  validateFormSilent() {
+    // フォーカス移動なしのバリデーション（リアルタイム用）
+    const userId = this.userIdInput.value.trim();
+    const password = this.passwordInput.value.trim();
+
+    // エラーは表示しないが、バリデーション結果は返す
+    if (!userId || !password) {
       return false;
     }
 
