@@ -8,6 +8,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - コードコメントも日本語で記述
 - タスク管理とプログレス報告も日本語で実行
 
+## 重要な制約事項
+**以下の制約を厳守してください：**
+- **MockAPIは絶対に使用しない** - 本番環境（Google Apps Script）のみを使用
+- 開発環境でも必ず本番APIを使用してテスト
+- `isDevelopment`の判定に関わらず、常にGAS APIを使用
+- テストデータやダミーデータは使用せず、実際のスプレッドシートデータを使用
+
 ## SuperClaude Framework設定
 このプロジェクトでは以下のSuperClaudeフラグを使用：
 - `--japanese`: 全出力日本語化（必須）

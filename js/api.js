@@ -8,7 +8,8 @@
  */
 
 // Apps Script Web AppのURL（Code.gs用）
-// 2025-09-10更新: 新しいデプロイURL
+// 2025-09-10更新: 新しいデプロイURL（日付フォーマット修正版）
+// 重要: MockAPIは使用しない - 常に本番環境でテスト
 const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbz5jHkdHk0_xLgx2zyFi1VXAwIkjogZqO4qyQI9CBm5-PQ0HsC4TIK1vYNuA5KjaPlAcA/exec';
 
 class GASApi {
