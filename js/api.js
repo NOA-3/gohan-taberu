@@ -75,9 +75,12 @@ class GASApi {
         // scriptタグを作成してJSONPリクエスト
         const script = document.createElement('script');
         script.src = url;
-        script.onerror = (errorEvent) => {
+        script.async = true; // 非同期読み込み
+        script.crossOrigin = 'anonymous'; // CORS設定
+        script.onerror = async (errorEvent) => {
           console.error('=== JSONP Request Failed ===');
           console.error('Error Event:', errorEvent);
+          console.warn('JSONP failed, trying fetch as fallback...');
           
           // クリーンアップ
           try {
@@ -89,7 +92,31 @@ class GASApi {
             console.warn('Cleanup error in onerror:', cleanupError);
           }
           
-          reject(new Error('ネットワークエラーまたはGoogle Apps Scriptのアクセスに失敗しました'));
+          // フォールバック: 通常のfetchを試みる（モバイル通常モード対策）
+          try {
+            console.log('=== Fetch Fallback Attempt ===');
+            const fetchUrl = url.replace(`&callback=${callbackName}`, '');
+            console.log('Fetch URL:', fetchUrl);
+            
+            const response = await fetch(fetchUrl, {
+              method: 'GET',
+              mode: 'no-cors', // CORSエラーを回避
+              credentials: 'omit'
+            });
+            
+            // no-corsモードでは実際のレスポンスは取得できないが、
+            // リクエスト自体は送信される
+            console.log('Fetch request sent (no-cors mode)');
+            
+            // no-corsの場合、デフォルトレスポンスを返す
+            resolve({
+              success: false,
+              error: 'CORS制限によりレスポンスを取得できません。JSONPを使用してください。'
+            });
+          } catch (fetchError) {
+            console.error('Fetch fallback also failed:', fetchError);
+            reject(new Error('ネットワークエラーまたはGoogle Apps Scriptのアクセスに失敗しました'));
+          }
         };
         
         // タイムアウト設定（モバイル対応で20秒に延長）
