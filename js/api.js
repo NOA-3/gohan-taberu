@@ -92,10 +92,15 @@ class GASApi {
           reject(new Error('ネットワークエラーまたはGoogle Apps Scriptのアクセスに失敗しました'));
         };
         
-        // タイムアウト設定（15秒）
+        // タイムアウト設定（モバイル対応で20秒に延長）
+        const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        const timeoutDuration = isMobile ? 20000 : 15000; // モバイルは20秒、PCは15秒
+        
         let timeoutId = setTimeout(() => {
           if (window[callbackName]) {
             console.warn('Request timeout for:', callbackName);
+            console.warn('Timeout duration:', timeoutDuration + 'ms');
+            console.warn('Is Mobile:', isMobile);
             
             // クリーンアップ
             try {
@@ -107,9 +112,13 @@ class GASApi {
               console.warn('Cleanup error in timeout:', cleanupError);
             }
             
-            reject(new Error('Google Apps Scriptへのリクエストがタイムアウトしました。ネットワーク環境を確認してください。'));
+            const errorMessage = isMobile 
+              ? 'モバイル回線でのリクエストがタイムアウトしました。Wi-Fi環境または電波の良い場所で再試行してください。'
+              : 'Google Apps Scriptへのリクエストがタイムアウトしました。ネットワーク環境を確認してください。';
+            
+            reject(new Error(errorMessage));
           }
-        }, 15000);
+        }, timeoutDuration);
         
         // 元のコールバックを保存し、タイムアウトクリア処理を追加
         const originalCallback = window[callbackName];
@@ -143,14 +152,31 @@ class GASApi {
    * ユーザー認証
    */
   async authenticateUser(id, password) {
-    // パスワードをBase64エンコード（最低限の難読化）
-    const encodedPassword = btoa(unescape(encodeURIComponent(password)));
-    return await this.request({
-      action: 'login',
-      id: id,
-      password: encodedPassword,
-      encoded: 'true'
-    });
+    try {
+      // パスワードをBase64エンコード（モバイル互換性改善）
+      const encodedPassword = btoa(encodeURIComponent(password));
+      
+      // デバッグ: モバイル環境情報をログ出力
+      console.log('=== Mobile Debug Info ===');
+      console.log('User Agent:', navigator.userAgent);
+      console.log('Screen Size:', `${screen.width}x${screen.height}`);
+      console.log('Is Mobile:', /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
+      console.log('Password Length:', password.length);
+      console.log('Encoded Password Length:', encodedPassword.length);
+      
+      return await this.request({
+        action: 'login',
+        id: id,
+        password: encodedPassword,
+        encoded: 'true'
+      });
+    } catch (error) {
+      console.error('=== Mobile Authentication Error ===');
+      console.error('Error Type:', error.name);
+      console.error('Error Message:', error.message);
+      console.error('User Agent:', navigator.userAgent);
+      throw new Error('モバイル環境でのログインエラー: ' + error.message);
+    }
   }
 
   /**
