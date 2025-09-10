@@ -18,58 +18,81 @@ class GASApi {
   }
 
   /**
-   * GETリクエスト実行（プリフライト回避）
+   * JSONPリクエスト実行（CORS回避）
    */
   async request(data) {
-    try {
-      // URLパラメータ作成
-      const params = new URLSearchParams();
-      for (const key in data) {
-        if (data[key] !== null && data[key] !== undefined) {
-          params.append(key, data[key].toString());
+    return new Promise((resolve, reject) => {
+      try {
+        // URLパラメータ作成
+        const params = new URLSearchParams();
+        for (const key in data) {
+          if (data[key] !== null && data[key] !== undefined) {
+            params.append(key, data[key].toString());
+          }
         }
+        
+        // JSONP用のコールバック関数名を生成
+        const callbackName = 'gasCallback_' + Date.now();
+        params.append('callback', callbackName);
+        
+        const url = `${this.baseUrl}?${params.toString()}`;
+        
+        // デバッグ: リクエスト情報を表示
+        console.log('=== GAS API Request (JSONP) ===');
+        console.log('URL:', url);
+        console.log('Callback:', callbackName);
+        console.log('Parameters:', Object.fromEntries(params));
+        
+        // グローバルコールバック関数を設定
+        window[callbackName] = (result) => {
+          console.log('=== GAS API Response ===');
+          console.log('Full Response:', result);
+          console.log('Success:', result.success);
+          if (result.error) {
+            console.error('API Error:', result.error);
+          }
+          
+          // クリーンアップ
+          delete window[callbackName];
+          document.head.removeChild(script);
+          
+          resolve(result);
+        };
+        
+        // scriptタグを作成してJSONPリクエスト
+        const script = document.createElement('script');
+        script.src = url;
+        script.onerror = () => {
+          console.error('=== JSONP Request Failed ===');
+          delete window[callbackName];
+          document.head.removeChild(script);
+          reject(new Error('JSONPリクエストが失敗しました'));
+        };
+        
+        // タイムアウト設定（10秒）
+        const timeout = setTimeout(() => {
+          if (window[callbackName]) {
+            delete window[callbackName];
+            document.head.removeChild(script);
+            reject(new Error('リクエストがタイムアウトしました'));
+          }
+        }, 10000);
+        
+        // コールバックが呼ばれたらタイムアウトをクリア
+        const originalCallback = window[callbackName];
+        window[callbackName] = (result) => {
+          clearTimeout(timeout);
+          originalCallback(result);
+        };
+        
+        document.head.appendChild(script);
+        
+      } catch (error) {
+        console.error('=== API Request Failed ===');
+        console.error('Error Details:', error);
+        reject(new Error('サーバーとの通信に失敗しました: ' + error.message));
       }
-      
-      const url = `${this.baseUrl}?${params.toString()}`;
-      
-      // デバッグ: リクエスト情報を表示
-      console.log('=== GAS API Request ===');
-      console.log('URL:', url);
-      console.log('Parameters:', Object.fromEntries(params));
-      console.log('Request Data:', data);
-      
-      // GETリクエスト（シンプルリクエスト - プリフライトなし）
-      const response = await fetch(url, {
-        method: 'GET',
-        // ヘッダーなし（シンプルリクエスト維持）
-      });
-
-      console.log('Response Status:', response.status);
-      console.log('Response OK:', response.ok);
-
-      if (!response.ok) {
-        console.error('HTTP Error:', response.status, response.statusText);
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
-      
-      // デバッグ: レスポンス内容を表示
-      console.log('=== GAS API Response ===');
-      console.log('Full Response:', result);
-      console.log('Success:', result.success);
-      if (result.error) {
-        console.error('API Error:', result.error);
-      }
-      
-      return result;
-      
-    } catch (error) {
-      console.error('=== API Request Failed ===');
-      console.error('Error Details:', error);
-      console.error('Stack Trace:', error.stack);
-      throw new Error('サーバーとの通信に失敗しました: ' + error.message);
-    }
+    });
   }
 
   /**

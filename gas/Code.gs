@@ -25,31 +25,11 @@ function doGet(e) {
 }
 
 /**
- * CORSヘッダー付きでリクエストを処理
+ * JSONP対応でリクエストを処理（CORS回避）
  */
 function handleRequest(e) {
-  const output = ContentService.createTextOutput();
-  output.setMimeType(ContentService.MimeType.JSON);
-  
-  // CORS ヘッダーを設定
-  output.addHeader('Access-Control-Allow-Origin', '*');
-  output.addHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  output.addHeader('Access-Control-Allow-Headers', 'Content-Type');
-  output.addHeader('Access-Control-Max-Age', '3600');
-  
   try {
-    // OPTIONSリクエスト（プリフライト）への対応
-    if (e.method === 'OPTIONS') {
-      return output.setContent('');
-    }
-    
-    let requestData;
-    if (e.method === 'POST' && e.postData) {
-      requestData = JSON.parse(e.postData.contents);
-    } else {
-      requestData = e.parameter;
-    }
-    
+    let requestData = e.parameter;
     const action = requestData.action;
     
     let result;
@@ -70,13 +50,36 @@ function handleRequest(e) {
         result = { success: false, error: 'Invalid action' };
     }
     
-    return output.setContent(JSON.stringify(result));
+    // JSONPコールバックが指定されている場合
+    if (requestData.callback) {
+      const output = ContentService.createTextOutput();
+      output.setMimeType(ContentService.MimeType.JAVASCRIPT);
+      const jsonpResponse = `${requestData.callback}(${JSON.stringify(result)})`;
+      return output.setContent(jsonpResponse);
+    } else {
+      // 通常のJSONレスポンス
+      const output = ContentService.createTextOutput();
+      output.setMimeType(ContentService.MimeType.JSON);
+      return output.setContent(JSON.stringify(result));
+    }
   } catch (error) {
     console.error('Request error:', error);
-    return output.setContent(JSON.stringify({
+    const errorResult = {
       success: false,
       error: error.toString()
-    }));
+    };
+    
+    // JSONPエラーレスポンス
+    if (e.parameter.callback) {
+      const output = ContentService.createTextOutput();
+      output.setMimeType(ContentService.MimeType.JAVASCRIPT);
+      const jsonpResponse = `${e.parameter.callback}(${JSON.stringify(errorResult)})`;
+      return output.setContent(jsonpResponse);
+    } else {
+      const output = ContentService.createTextOutput();
+      output.setMimeType(ContentService.MimeType.JSON);
+      return output.setContent(JSON.stringify(errorResult));
+    }
   }
 }
 
