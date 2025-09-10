@@ -136,26 +136,44 @@ function authenticateUser(id, password, encoded) {
 }
 
 /**
- * 指定年月のレシピ取得（パフォーマンス最適化版）
+ * 指定年月のレシピ取得（デバッグ強化版）
  */
 function getRecipes(year, month) {
   try {
+    console.log(`=== getRecipes Debug Start ===`);
+    console.log(`Request: year=${year}, month=${month}`);
+    
     const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
     const menuSheet = ss.getSheetByName(SHEET_NAMES.MENU);
     
     // パフォーマンス最適化: 必要なデータのみ取得
     const targetMonth = `${year}/${String(month).padStart(2, '0')}`;
+    console.log(`Target month string: "${targetMonth}"`);
+    
     const lastRow = menuSheet.getLastRow();
+    console.log(`Last row: ${lastRow}`);
     
     if (lastRow <= 1) {
+      console.log('No data found (lastRow <= 1)');
       return { success: true, recipes: [] };
     }
     
     // ヘッダーを除いたデータ範囲を取得
     const dataRange = menuSheet.getRange(2, 1, lastRow - 1, 6);
     const data = dataRange.getValues();
+    console.log(`Data rows retrieved: ${data.length}`);
+    
+    // 最初の数行をデバッグ出力
+    for (let i = 0; i < Math.min(5, data.length); i++) {
+      const [dateStr, , main] = data[i];
+      console.log(`Row ${i + 2}: date="${dateStr}" (type: ${typeof dateStr}), main="${main}"`);
+      if (dateStr) {
+        console.log(`Date string: "${dateStr.toString()}"`);
+      }
+    }
     
     const recipes = [];
+    let matchCount = 0;
     
     // データをフィルタリングして処理
     for (let i = 0; i < data.length; i++) {
@@ -165,13 +183,21 @@ function getRecipes(year, month) {
       if (!dateStr) continue;
       
       const dateString = dateStr.toString();
-      if (dateString.startsWith(targetMonth)) {
+      const isMatch = dateString.startsWith(targetMonth);
+      
+      if (isMatch) {
+        matchCount++;
+        console.log(`Match found at row ${i + 2}: "${dateString}" matches "${targetMonth}"`);
+        
         const date = new Date(dateStr);
         
         // 無効な日付をスキップ
-        if (isNaN(date.getTime())) continue;
+        if (isNaN(date.getTime())) {
+          console.log(`Invalid date skipped: "${dateStr}"`);
+          continue;
+        }
         
-        recipes.push({
+        const recipe = {
           date: Utilities.formatDate(date, 'Asia/Tokyo', 'yyyy/M/d'),
           dayOfWeek: getDayOfWeek(date),
           main: main || '',
@@ -179,9 +205,16 @@ function getRecipes(year, month) {
           side2: side2 || '',
           soup: soup || '',
           isEditable: isEditable(date)
-        });
+        };
+        
+        console.log(`Recipe added:`, recipe);
+        recipes.push(recipe);
       }
     }
+    
+    console.log(`=== getRecipes Debug End ===`);
+    console.log(`Total matches found: ${matchCount}`);
+    console.log(`Final recipes count: ${recipes.length}`);
     
     return {
       success: true,
