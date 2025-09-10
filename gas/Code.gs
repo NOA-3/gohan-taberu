@@ -38,13 +38,17 @@ function handleRequest(e) {
         result = authenticateUser(requestData.id, requestData.password);
         break;
       case 'getRecipes':
-        result = getRecipes(requestData.year, requestData.month);
+        // 数値に変換して渡す
+        result = getRecipes(parseInt(requestData.year), parseInt(requestData.month));
         break;
       case 'updateCheck':
         result = updateCheck(requestData.date, requestData.userName, requestData.checked);
         break;
       case 'getCheckState':
         result = getCheckState(requestData.date, requestData.userName);
+        break;
+      case 'getUserData':
+        result = getUserData(requestData.id);
         break;
       default:
         result = { success: false, error: 'Invalid action' };
@@ -164,6 +168,9 @@ function getRecipes(year, month) {
  */
 function updateCheck(date, userName, checked) {
   try {
+    // checkedパラメータをブール値に変換
+    const isChecked = (checked === 'true' || checked === true);
+    
     // 時間制限チェック
     const targetDate = new Date(date);
     if (!isEditable(targetDate)) {
@@ -212,11 +219,11 @@ function updateCheck(date, userName, checked) {
     }
     
     // チェック状態を更新
-    checkSheet.getRange(dateRow + 1, userColumn + 1).setValue(checked);
+    checkSheet.getRange(dateRow + 1, userColumn + 1).setValue(isChecked);
     
     return {
       success: true,
-      checked: checked
+      checked: isChecked
     };
   } catch (error) {
     console.error('updateCheck error:', error);
