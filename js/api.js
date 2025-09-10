@@ -7,8 +7,9 @@
  * 3. シンプルリクエストでブラウザ制限なし
  */
 
-// Apps Script Web AppのURL（Code-Final-CORS.gs用）
-const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbySNobqGMdzVRg-CnsFZ3kCzPHtCMh8r1BRVv2C8lZtwKfVjzDzjmz4txQypvCZApqMcA/exec';
+// Apps Script Web AppのURL（Code.gs用）
+// 2025-09-10更新: 新しいデプロイURL
+const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbz5jHkdHk0_xLgx2zyFi1VXAwIkjogZqO4qyQI9CBm5-PQ0HsC4TIK1vYNuA5KjaPlAcA/exec';
 
 class GASApi {
   constructor() {
