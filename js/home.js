@@ -208,7 +208,7 @@ class HomeManager {
     
     if (checkbox && label) {
       checkbox.checked = checked;
-      label.textContent = checked ? '利用する ✅' : '利用しない ⬜';
+      label.textContent = `利用する ${checked ? '✅' : '⬜'}`;
     }
   }
 
@@ -307,7 +307,7 @@ class HomeManager {
             for="check_${menu.date.replace(/\//g, '_')}"
             class="check-label ${isDisabled ? 'disabled' : ''}"
           >
-            ${isChecked ? '利用する ✅' : '利用しない ⬜'}
+            利用する ${isChecked ? '✅' : '⬜'}
           </label>
         </div>
       </div>
@@ -330,7 +330,7 @@ class HomeManager {
     
     try {
       // UI即座更新
-      label.textContent = isChecked ? '利用する ✅' : '利用しない ⬜';
+      label.textContent = `利用する ${isChecked ? '✅' : '⬜'}`;
       event.target.disabled = true;
       
       // API呼び出し
@@ -343,14 +343,14 @@ class HomeManager {
       } else {
         // 失敗時：元に戻す
         event.target.checked = !isChecked;
-        label.textContent = !isChecked ? '利用する ✅' : '利用しない ⬜';
+        label.textContent = `利用する ${!isChecked ? '✅' : '⬜'}`;
         this.showError(result.error || 'チェック状態の更新に失敗しました');
       }
     } catch (error) {
       console.error('Checkbox change error:', error);
       // エラー時：元に戻す
       event.target.checked = !isChecked;
-      label.textContent = !isChecked ? '利用する ✅' : '利用しない ⬜';
+      label.textContent = `利用する ${!isChecked ? '✅' : '⬜'}`;
       this.showError('チェック状態の更新中にエラーが発生しました');
     } finally {
       event.target.disabled = false;
