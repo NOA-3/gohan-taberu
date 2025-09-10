@@ -5,6 +5,8 @@
 class AuthManager {
   constructor() {
     this.isRedirecting = false; // リダイレクト中フラグ
+    this.isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    this.sessionClearTimer = null; // モバイル用遅延タイマー
     this.init();
   }
 
@@ -65,29 +67,81 @@ class AuthManager {
   }
 
   setupTabCloseLogout() {
-    // タブ終了・ページ離脱時にログアウト（リダイレクト中は除く）
-    window.addEventListener('beforeunload', () => {
-      if (!this.isRedirecting) {
-        console.log('beforeunload: Clearing login info');
-        this.clearLoginInfo();
-      }
-    });
+    console.log('=== Session Management Setup ===');
+    console.log('Device type:', this.isMobile ? 'Mobile' : 'PC');
+    console.log('User Agent:', navigator.userAgent);
+    
+    if (!this.isMobile) {
+      // PC: 従来の厳密なセッション管理
+      console.log('Using PC session management (strict)');
+      
+      window.addEventListener('beforeunload', () => {
+        if (!this.isRedirecting) {
+          console.log('PC beforeunload: Clearing login info');
+          this.clearLoginInfo();
+        }
+      });
 
-    // ウィンドウ/タブを閉じる際の処理（リダイレクト中は除く）
-    window.addEventListener('unload', () => {
-      if (!this.isRedirecting) {
-        console.log('unload: Clearing login info');
-        this.clearLoginInfo();
-      }
-    });
+      window.addEventListener('unload', () => {
+        if (!this.isRedirecting) {
+          console.log('PC unload: Clearing login info');
+          this.clearLoginInfo();
+        }
+      });
 
-    // ページハイド時（より確実）
-    window.addEventListener('pagehide', () => {
-      if (!this.isRedirecting) {
-        console.log('pagehide: Clearing login info');
+      window.addEventListener('pagehide', () => {
+        if (!this.isRedirecting) {
+          console.log('PC pagehide: Clearing login info');
+          this.clearLoginInfo();
+        }
+      });
+    } else {
+      // モバイル: より柔軟なセッション管理
+      console.log('Using Mobile session management (flexible)');
+      this.setupMobileSessionManagement();
+    }
+  }
+
+  setupMobileSessionManagement() {
+    // モバイル用: visibilitychangeで真のアプリ終了を検出
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden' && !this.isRedirecting) {
+        console.log('Mobile: Page hidden, starting delayed logout timer');
+        this.startDelayedSessionClear();
+      } else if (document.visibilityState === 'visible') {
+        console.log('Mobile: Page visible, canceling logout timer');
+        this.cancelDelayedSessionClear();
+      }
+    });
+    
+    // モバイルでも真のページ離脱（アプリ終了）は検出
+    window.addEventListener('pagehide', (event) => {
+      if (!this.isRedirecting && event.persisted === false) {
+        console.log('Mobile pagehide: True app termination detected');
         this.clearLoginInfo();
       }
     });
+  }
+
+  startDelayedSessionClear() {
+    // 既存のタイマーをクリア
+    this.cancelDelayedSessionClear();
+    
+    // 5秒後にセッションクリア（一時的な離脱との区別）
+    this.sessionClearTimer = setTimeout(() => {
+      if (!this.isRedirecting) {
+        console.log('Mobile: Delayed session clear executed');
+        this.clearLoginInfo();
+      }
+    }, 5000);
+  }
+
+  cancelDelayedSessionClear() {
+    if (this.sessionClearTimer) {
+      clearTimeout(this.sessionClearTimer);
+      this.sessionClearTimer = null;
+      console.log('Mobile: Delayed session clear canceled');
+    }
   }
 
   async handleLogin() {
@@ -275,6 +329,7 @@ class AuthManager {
   }
 
   logout() {
+    this.cancelDelayedSessionClear(); // モバイル用タイマーをクリア
     this.clearLoginInfo();
     window.location.href = 'index.html';
   }
