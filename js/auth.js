@@ -104,7 +104,21 @@ class AuthManager {
 
   setupMobileSessionManagement() {
     // モバイル用: visibilitychangeで真のアプリ終了を検出
+    // ただし、ログインページでは動作させない
     document.addEventListener('visibilitychange', () => {
+      // ログインページ（index.html）では何もしない
+      const path = window.location.pathname;
+      const isLoginPage = path === '/' || 
+                          path.endsWith('/index.html') || 
+                          path.endsWith('/') ||
+                          path === '/gohan-taberu/' ||
+                          path === '/gohan-taberu/index.html';
+      
+      if (isLoginPage) {
+        console.log('Mobile: On login page, skipping session management');
+        return;
+      }
+      
       if (document.visibilityState === 'hidden' && !this.isRedirecting) {
         console.log('Mobile: Page hidden, starting delayed logout timer');
         this.startDelayedSessionClear();
@@ -127,13 +141,13 @@ class AuthManager {
     // 既存のタイマーをクリア
     this.cancelDelayedSessionClear();
     
-    // 5秒後にセッションクリア（一時的な離脱との区別）
+    // 30秒後にセッションクリア（十分な時間を確保）
     this.sessionClearTimer = setTimeout(() => {
       if (!this.isRedirecting) {
-        console.log('Mobile: Delayed session clear executed');
+        console.log('Mobile: Delayed session clear executed after 30 seconds');
         this.clearLoginInfo();
       }
-    }, 5000);
+    }, 30000);
   }
 
   cancelDelayedSessionClear() {
