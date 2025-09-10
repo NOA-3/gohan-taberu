@@ -8,9 +8,9 @@
  */
 
 // Apps Script Web AppのURL（Code.gs用）
-// 2025-09-10更新: 修正版 - Dateオブジェクト対応で9月メニューデータ取得成功
+// 2025-09-10更新: isEditable修正版 - 未来の日付は編集可能、過去のみ期限切れ
 // 重要: MockAPIは使用しない - 常に本番環境でテスト
-const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbx6HbRGFS6oN9_mEszNe50N5HdA1REspBR8daoeRIFITGBAdGqvu26zfXrkwxATOyo2ng/exec';
+const GAS_API_URL = 'https://script.google.com/macros/s/AKfycby3_LhWbess0qXtlWZI70pMNFfAS_vkWyx4xU3mmZiKRI29G_ovNmElKXSf6iicAN92DQ/exec';
 
 class GASApi {
   constructor() {
