@@ -237,7 +237,7 @@ class HomeManager {
             if (displayIndex === 0) {
               setTimeout(() => {
                 menuBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
-              }, 50);
+              }, 20);
             }
           });
         
@@ -270,9 +270,9 @@ class HomeManager {
             
             console.log(`Sequential day ${menu.date} displayed successfully`);
             
-            // 次のリクエストまで短い間隔を空ける（100ms）
+            // 次のリクエストまで最小限の間隔を空ける（50ms）
             if (i < todayAndFuture.length - 1) {
-              await new Promise(resolve => setTimeout(resolve, 100));
+              await new Promise(resolve => setTimeout(resolve, 50));
             }
             
           } catch (error) {
