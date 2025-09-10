@@ -153,14 +153,36 @@ class GASApi {
    */
   async authenticateUser(id, password) {
     try {
-      // パスワードをBase64エンコード（モバイル互換性改善）
-      const encodedPassword = btoa(encodeURIComponent(password));
+      // パスワードをBase64エンコード（モバイル互換性改善 - UTF-8対応）
+      let encodedPassword;
+      try {
+        // 方法1: 標準的なエンコード
+        encodedPassword = btoa(encodeURIComponent(password));
+        console.log('Encoding method: Standard btoa + encodeURIComponent');
+      } catch (btoaError) {
+        console.warn('Standard btoa failed, using TextEncoder fallback:', btoaError);
+        try {
+          // 方法2: TextEncoder使用（モダンブラウザ対応）
+          const encoder = new TextEncoder();
+          const data = encoder.encode(password);
+          encodedPassword = btoa(String.fromCharCode.apply(null, data));
+          console.log('Encoding method: TextEncoder fallback');
+        } catch (fallbackError) {
+          console.error('All encoding methods failed:', fallbackError);
+          // 方法3: 最後の手段 - 平文送信（セキュリティ警告）
+          encodedPassword = password;
+          console.warn('WARNING: Using plain text password due to encoding failures');
+        }
+      }
       
       // デバッグ: モバイル環境情報をログ出力
       console.log('=== Mobile Debug Info ===');
       console.log('User Agent:', navigator.userAgent);
       console.log('Screen Size:', `${screen.width}x${screen.height}`);
-      console.log('Is Mobile:', /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
+      const isMobileDetected = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      console.log('Is Mobile:', isMobileDetected);
+      console.log('Touch Support:', 'ontouchstart' in window);
+      console.log('Max Touch Points:', navigator.maxTouchPoints || 0);
       console.log('Password Length:', password.length);
       console.log('Encoded Password Length:', encodedPassword.length);
       

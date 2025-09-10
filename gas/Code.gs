@@ -92,19 +92,37 @@ function handleRequest(e) {
  */
 function authenticateUser(id, password, encoded) {
   try {
+    console.log('=== Mobile Authentication Debug ===');
+    console.log('ID:', id);
+    console.log('Password length:', password ? password.length : 0);
+    console.log('Encoded flag:', encoded);
+    
     // Base64エンコードされたパスワードをデコード
     let decodedPassword = password;
     if (encoded === 'true') {
       try {
-        decodedPassword = Utilities.newBlob(Utilities.base64Decode(password)).getDataAsString();
-      } catch (e) {
-        console.error('Password decode error:', e);
-        return {
-          success: false,
-          error: '認証データの処理に失敗しました'
-        };
+        // 新しいデコード方式（モバイル対応）
+        const decodedBytes = Utilities.base64Decode(password);
+        decodedPassword = decodeURIComponent(Utilities.newBlob(decodedBytes).getDataAsString());
+        console.log('Decoding method: Base64 + decodeURIComponent');
+      } catch (decodeError) {
+        console.warn('Base64 decoding failed, trying alternative method:', decodeError);
+        try {
+          // 代替方式: 直接デコード
+          decodedPassword = Utilities.newBlob(Utilities.base64Decode(password)).getDataAsString();
+          console.log('Decoding method: Standard Base64 fallback');
+        } catch (fallbackError) {
+          console.error('All decoding methods failed:', fallbackError);
+          // 最後の手段: エンコードされていないとして処理
+          decodedPassword = password;
+          console.warn('WARNING: Using password as-is due to decoding failures');
+        }
       }
+    } else {
+      console.log('Using plain text password (encoded=false)');
     }
+    
+    console.log('Final decoded password length:', decodedPassword ? decodedPassword.length : 0);
     
     const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
     const loginSheet = ss.getSheetByName(SHEET_NAMES.LOGIN);
