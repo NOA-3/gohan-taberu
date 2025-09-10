@@ -178,48 +178,113 @@ class HomeManager {
         return;
       }
       
-      // 1日ずつ完全に読み込んで表示
-      for (let i = 0; i < todayAndFuture.length; i++) {
-        try {
-          const menu = todayAndFuture[i];
-          console.log(`Loading day ${i + 1}/${todayAndFuture.length}: ${menu.date}`);
-          
-          // チェック状態を取得
-          const checkResult = await api.getCheckState(menu.date, this.currentUser.userName);
-          
-          if (checkResult.success) {
-            this.checkStates.set(menu.date, checkResult.checked);
-            console.log(`Check state loaded for ${menu.date}: ${checkResult.checked}`);
-          } else {
-            console.warn(`Failed to load check state for ${menu.date}:`, checkResult.error);
-            this.checkStates.set(menu.date, false); // デフォルト値
+      // 部分的並列処理：最初の3日分を並列取得、残りは順次処理
+      const parallelBatchSize = Math.min(3, todayAndFuture.length);
+      
+      // Phase 1: 最初の3日分を並列処理（最重要な今日のデータを最速で表示）
+      if (parallelBatchSize > 0) {
+        console.log(`Phase 1: Loading first ${parallelBatchSize} days in parallel`);
+        
+        const parallelPromises = todayAndFuture.slice(0, parallelBatchSize).map(async (menu, index) => {
+          try {
+            console.log(`Parallel loading: ${menu.date}`);
+            
+            // チェック状態を取得
+            const checkResult = await api.getCheckState(menu.date, this.currentUser.userName);
+            
+            return {
+              menu,
+              index,
+              checkResult,
+              success: true
+            };
+          } catch (error) {
+            console.error(`Parallel loading failed for ${menu.date}:`, error);
+            return {
+              menu,
+              index,
+              checkResult: { success: false, checked: false },
+              success: false,
+              error
+            };
           }
-          
-          // メニューボックスを作成して即座に表示
-          const menuBox = this.createMenuBox(menu);
-          this.menuContainer.appendChild(menuBox);
-          
-          console.log(`Day ${menu.date} displayed successfully`);
-          
-          // 最初の日（今日）の場合はスクロール
-          if (i === 0) {
-            setTimeout(() => {
-              menuBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }, 100);
+        });
+        
+        // 並列リクエストの完了を待つ
+        const parallelResults = await Promise.all(parallelPromises);
+        
+        // 結果を日付順に処理して表示
+        parallelResults
+          .sort((a, b) => a.index - b.index) // 日付順を保持
+          .forEach((result, displayIndex) => {
+            const { menu, checkResult, success, error } = result;
+            
+            if (success && checkResult.success) {
+              this.checkStates.set(menu.date, checkResult.checked);
+              console.log(`Parallel check state loaded for ${menu.date}: ${checkResult.checked}`);
+            } else {
+              console.warn(`Parallel check state failed for ${menu.date}:`, error || checkResult.error);
+              this.checkStates.set(menu.date, false);
+            }
+            
+            // メニューボックスを作成して表示
+            const menuBox = this.createMenuBox(menu);
+            this.menuContainer.appendChild(menuBox);
+            
+            console.log(`Parallel day ${menu.date} displayed successfully`);
+            
+            // 最初の日（今日）の場合はスクロール
+            if (displayIndex === 0) {
+              setTimeout(() => {
+                menuBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }, 50);
+            }
+          });
+        
+        console.log(`Phase 1 completed: ${parallelBatchSize} days loaded in parallel`);
+      }
+      
+      // Phase 2: 残りの日程を順次処理（従来の安全な方式）
+      if (todayAndFuture.length > parallelBatchSize) {
+        console.log(`Phase 2: Loading remaining ${todayAndFuture.length - parallelBatchSize} days sequentially`);
+        
+        for (let i = parallelBatchSize; i < todayAndFuture.length; i++) {
+          try {
+            const menu = todayAndFuture[i];
+            console.log(`Sequential loading day ${i + 1}/${todayAndFuture.length}: ${menu.date}`);
+            
+            // チェック状態を取得
+            const checkResult = await api.getCheckState(menu.date, this.currentUser.userName);
+            
+            if (checkResult.success) {
+              this.checkStates.set(menu.date, checkResult.checked);
+              console.log(`Sequential check state loaded for ${menu.date}: ${checkResult.checked}`);
+            } else {
+              console.warn(`Sequential check state failed for ${menu.date}:`, checkResult.error);
+              this.checkStates.set(menu.date, false);
+            }
+            
+            // メニューボックスを作成して即座に表示
+            const menuBox = this.createMenuBox(menu);
+            this.menuContainer.appendChild(menuBox);
+            
+            console.log(`Sequential day ${menu.date} displayed successfully`);
+            
+            // 次のリクエストまで短い間隔を空ける（100ms）
+            if (i < todayAndFuture.length - 1) {
+              await new Promise(resolve => setTimeout(resolve, 100));
+            }
+            
+          } catch (error) {
+            console.error(`Sequential loading failed for day ${todayAndFuture[i].date}:`, error);
+            // エラーがあってもメニューボックスは表示（チェック状態なしで）
+            this.checkStates.set(todayAndFuture[i].date, false);
+            const menuBox = this.createMenuBox(todayAndFuture[i]);
+            this.menuContainer.appendChild(menuBox);
           }
-          
-          // 次のリクエストまで少し間隔を空ける（API制限考慮）
-          if (i < todayAndFuture.length - 1) {
-            await new Promise(resolve => setTimeout(resolve, 200));
-          }
-          
-        } catch (error) {
-          console.error(`Failed to load day ${todayAndFuture[i].date}:`, error);
-          // エラーがあってもメニューボックスは表示（チェック状態なしで）
-          this.checkStates.set(todayAndFuture[i].date, false);
-          const menuBox = this.createMenuBox(todayAndFuture[i]);
-          this.menuContainer.appendChild(menuBox);
         }
+        
+        console.log('Phase 2 completed: All remaining days loaded sequentially');
       }
       
       console.log('All menu data loaded progressively day by day');

@@ -31,8 +31,8 @@ class GASApi {
           }
         }
         
-        // JSONP用のコールバック関数名を生成
-        const callbackName = 'gasCallback_' + Date.now();
+        // JSONP用のコールバック関数名を生成（衝突回避）
+        const callbackName = 'gasCallback_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
         params.append('callback', callbackName);
         
         const url = `${this.baseUrl}?${params.toString()}`;
