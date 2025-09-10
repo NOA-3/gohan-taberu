@@ -52,22 +52,24 @@ class GASApi {
             console.error('API Error:', result.error);
           }
           
-          // クリーンアップ（安全に実行）
-          try {
-            delete window[callbackName];
-            if (script && script.parentNode) {
-              script.parentNode.removeChild(script);
-            }
-          } catch (cleanupError) {
-            console.warn('Cleanup error:', cleanupError);
-          }
-          
           // レスポンスのバリデーション
           if (result && typeof result === 'object') {
             resolve(result);
           } else {
             reject(new Error('無効なレスポンス形式です'));
           }
+          
+          // クリーンアップを遅延実行（レスポンス処理後）
+          setTimeout(() => {
+            try {
+              delete window[callbackName];
+              if (script && script.parentNode) {
+                script.parentNode.removeChild(script);
+              }
+            } catch (cleanupError) {
+              console.warn('Cleanup error:', cleanupError);
+            }
+          }, 100);
         };
         
         // scriptタグを作成してJSONPリクエスト

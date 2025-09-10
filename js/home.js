@@ -135,9 +135,10 @@ class HomeManager {
           console.warn('No recipes found for this month');
           this.showEmptyState();
         } else {
-          await this.loadCheckStates();
+          // メニューを先に表示してから、チェック状態を順次読み込み
           this.renderMenuBoxes();
           this.scrollToToday();
+          this.loadCheckStatesProgressively();
         }
       } else {
         console.error('API returned success: false');
@@ -156,61 +157,43 @@ class HomeManager {
     }
   }
 
-  async loadCheckStates() {
+  async loadCheckStatesProgressively() {
     try {
-      console.log('=== Loading Check States (Optimized) ===');
+      console.log('=== Loading Check States Progressively ===');
       
       // 今日の日付を取得
       const today = new Date();
       const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
       
-      // 今日以降のメニューのみを優先して読み込み
+      // 今日以降のメニューのみを対象
       const todayAndFuture = this.menuData.filter(menu => {
         const menuDate = new Date(menu.date);
         return menuDate >= todayDate;
       });
       
-      const past = this.menuData.filter(menu => {
-        const menuDate = new Date(menu.date);
-        return menuDate < todayDate;
-      });
-      
-      // 今日以降のチェック状態を並列で読み込み
-      const todayPromises = todayAndFuture.slice(0, 5).map(async (menu) => {
+      // 1件ずつ順次読み込んで、読み込み完了したものから更新
+      for (let i = 0; i < todayAndFuture.length; i++) {
         try {
+          const menu = todayAndFuture[i];
           const result = await api.getCheckState(menu.date, this.currentUser.userName);
+          
           if (result.success) {
             this.checkStates.set(menu.date, result.checked);
+            // 即座にチェックボックスの状態を更新
+            this.updateCheckboxState(menu.date, result.checked);
+            console.log(`Check state loaded for ${menu.date}: ${result.checked}`);
           }
-          return { date: menu.date, success: result.success };
+          
+          // 次のリクエストまで少し間隔を空ける
+          if (i < todayAndFuture.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 150));
+          }
         } catch (error) {
-          console.warn(`Failed to load check state for ${menu.date}:`, error);
-          return { date: menu.date, success: false };
+          console.warn(`Failed to load check state for ${todayAndFuture[i].date}:`, error);
         }
-      });
-      
-      // 今日以降の分を先に処理
-      await Promise.all(todayPromises);
-      console.log('Priority check states loaded');
-      
-      // 残りの今日以降のデータを並列読み込み
-      if (todayAndFuture.length > 5) {
-        const remainingTodayPromises = todayAndFuture.slice(5).map(async (menu) => {
-          try {
-            const result = await api.getCheckState(menu.date, this.currentUser.userName);
-            if (result.success) {
-              this.checkStates.set(menu.date, result.checked);
-            }
-          } catch (error) {
-            console.warn(`Failed to load check state for ${menu.date}:`, error);
-          }
-        });
-        
-        await Promise.all(remainingTodayPromises);
       }
       
-      // 過ぎた日付のチェック状態は読み込まない（パフォーマンス最適化）
-      console.log(`Skipped loading check states for ${past.length} past dates`);
+      console.log('All check states loaded progressively');
       
     } catch (error) {
       console.error('=== Check State Load Error ===');
