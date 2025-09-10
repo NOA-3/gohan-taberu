@@ -135,10 +135,8 @@ class HomeManager {
           console.warn('No recipes found for this month');
           this.showEmptyState();
         } else {
-          // メニューを先に表示してから、チェック状態を順次読み込み
-          this.renderMenuBoxes();
-          this.scrollToToday();
-          this.loadCheckStatesProgressively();
+          // 今日から順に1日ずつ完全に読み込んで表示
+          this.loadMenuDataProgressively();
         }
       } else {
         console.error('API returned success: false');
@@ -157,9 +155,9 @@ class HomeManager {
     }
   }
 
-  async loadCheckStatesProgressively() {
+  async loadMenuDataProgressively() {
     try {
-      console.log('=== Loading Check States Progressively ===');
+      console.log('=== Loading Menu Data Progressively (Day by Day) ===');
       
       // 今日の日付を取得
       const today = new Date();
@@ -169,36 +167,68 @@ class HomeManager {
       const todayAndFuture = this.menuData.filter(menu => {
         const menuDate = new Date(menu.date);
         return menuDate >= todayDate;
-      });
+      }).sort((a, b) => new Date(a.date) - new Date(b.date)); // 日付順にソート
       
-      // 1件ずつ順次読み込んで、読み込み完了したものから更新
+      // メニューコンテナをクリア
+      this.menuContainer.innerHTML = '';
+      this.hideEmptyState();
+      
+      if (todayAndFuture.length === 0) {
+        this.showEmptyState();
+        return;
+      }
+      
+      // 1日ずつ完全に読み込んで表示
       for (let i = 0; i < todayAndFuture.length; i++) {
         try {
           const menu = todayAndFuture[i];
-          const result = await api.getCheckState(menu.date, this.currentUser.userName);
+          console.log(`Loading day ${i + 1}/${todayAndFuture.length}: ${menu.date}`);
           
-          if (result.success) {
-            this.checkStates.set(menu.date, result.checked);
-            // 即座にチェックボックスの状態を更新
-            this.updateCheckboxState(menu.date, result.checked);
-            console.log(`Check state loaded for ${menu.date}: ${result.checked}`);
+          // チェック状態を取得
+          const checkResult = await api.getCheckState(menu.date, this.currentUser.userName);
+          
+          if (checkResult.success) {
+            this.checkStates.set(menu.date, checkResult.checked);
+            console.log(`Check state loaded for ${menu.date}: ${checkResult.checked}`);
+          } else {
+            console.warn(`Failed to load check state for ${menu.date}:`, checkResult.error);
+            this.checkStates.set(menu.date, false); // デフォルト値
           }
           
-          // 次のリクエストまで少し間隔を空ける
+          // メニューボックスを作成して即座に表示
+          const menuBox = this.createMenuBox(menu);
+          this.menuContainer.appendChild(menuBox);
+          
+          console.log(`Day ${menu.date} displayed successfully`);
+          
+          // 最初の日（今日）の場合はスクロール
+          if (i === 0) {
+            setTimeout(() => {
+              menuBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 100);
+          }
+          
+          // 次のリクエストまで少し間隔を空ける（API制限考慮）
           if (i < todayAndFuture.length - 1) {
-            await new Promise(resolve => setTimeout(resolve, 150));
+            await new Promise(resolve => setTimeout(resolve, 200));
           }
+          
         } catch (error) {
-          console.warn(`Failed to load check state for ${todayAndFuture[i].date}:`, error);
+          console.error(`Failed to load day ${todayAndFuture[i].date}:`, error);
+          // エラーがあってもメニューボックスは表示（チェック状態なしで）
+          this.checkStates.set(todayAndFuture[i].date, false);
+          const menuBox = this.createMenuBox(todayAndFuture[i]);
+          this.menuContainer.appendChild(menuBox);
         }
       }
       
-      console.log('All check states loaded progressively');
+      console.log('All menu data loaded progressively day by day');
       
     } catch (error) {
-      console.error('=== Check State Load Error ===');
+      console.error('=== Progressive Menu Load Error ===');
       console.error('Error:', error);
       console.error('Stack:', error.stack);
+      this.showEmptyState();
     }
   }
   
@@ -212,40 +242,7 @@ class HomeManager {
     }
   }
 
-  renderMenuBoxes() {
-    this.menuContainer.innerHTML = '';
-    
-    if (this.menuData.length === 0) {
-      this.showEmptyState();
-      return;
-    }
-    
-    this.hideEmptyState();
-    
-    // 今日の日付を取得
-    const today = new Date();
-    const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    
-    // 今日以降のメニューのみを表示
-    const todayAndFuture = this.menuData.filter(menu => {
-      const menuDate = new Date(menu.date);
-      return menuDate >= todayDate;
-    });
-    
-    console.log(`Displaying ${todayAndFuture.length} menus from today onwards`);
-    console.log(`Skipped ${this.menuData.length - todayAndFuture.length} past menus`);
-    
-    // 今日以降のメニューのみ表示
-    todayAndFuture.forEach(menu => {
-      const menuBox = this.createMenuBox(menu);
-      this.menuContainer.appendChild(menuBox);
-    });
-    
-    // 表示するメニューがない場合
-    if (todayAndFuture.length === 0) {
-      this.showEmptyState();
-    }
-  }
+  // 従来のrenderMenuBoxes関数は削除（loadMenuDataProgressivelyに統合）
 
   createMenuBox(menu) {
     const isChecked = this.checkStates.get(menu.date) || false;
@@ -362,23 +359,7 @@ class HomeManager {
     return parts[2] || '';
   }
 
-  scrollToToday() {
-    const today = new Date();
-    const todayString = `${today.getFullYear()}/${today.getMonth() + 1}/${today.getDate()}`;
-    
-    // 今日の日付のボックスを探す
-    const todayBox = document.querySelector(`[data-date="${todayString}"]`);
-    if (todayBox) {
-      todayBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      return;
-    }
-    
-    // 今日の日付がない場合は、最も近い日付のボックスにスクロール
-    const boxes = document.querySelectorAll('.menu-box');
-    if (boxes.length > 0) {
-      boxes[0].scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  }
+  // scrollToToday関数は削除（loadMenuDataProgressivelyで自動スクロール処理）
 
   showLoading(show) {
     if (show) {
